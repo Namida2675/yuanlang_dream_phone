@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一个可以联系袁朗的通讯器 V1</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        /* --- 全局设置 --- */
+        body {
+            background-color: #121212;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'VT323', monospace;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* --- 手机机身 --- */
+        .phone-body {
+            width: 270px;
+            height: 580px;
+            background: 
+                linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.1) 100%),
+                linear-gradient(to bottom, #d0d0d0 0%, #a0a0a0 20%, #808080 50%, #606060 100%);
+            border-radius: 30px 30px 50px 50px;
+            box-shadow: 
+                inset 3px 3px 6px rgba(255,255,255,0.7),
+                inset -3px -3px 6px rgba(0,0,0,0.6),
+                25px 25px 50px rgba(0,0,0,0.8),
+                -5px -5px 20px rgba(255,255,255,0.05);
+            padding: 25px 18px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            border: 1px solid #444;
+        }
+
+        /* --- 屏幕区域 --- */
+        .screen-bezel {
+            background: #222;
+            width: 100%;
+            padding: 10px 10px 5px 10px;
+            border-radius: 10px 10px 25px 25px;
+            box-shadow: 
+                inset 0 2px 5px rgba(0,0,0,0.8),
+                0 1px 0 rgba(255,255,255,0.1);
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            border: 1px solid #000;
+        }
+
+        .screen {
+            background-color: #9ea792;
+            width: 100%;
+            height: 150px;
+            border: 2px solid #111;
+            border-radius: 2px;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            color: #000;
+            font-size: 18px;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .screen::after {
+            content: " ";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 2px 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 4px;
+            border-bottom: 1px solid #333;
+            font-size: 14px;
+            z-index: 5;
+            background-color: #9ea792;
+            font-weight: bold;
+        }
+
+        .viewport {
+            flex: 1;
+            padding: 5px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            z-index: 5;
+            scrollbar-width: none;
+        }
+        .viewport::-webkit-scrollbar { display: none; }
+
+        /* Logo */
+        .brand {
+            color: #e0e0e0;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 6px;
+            letter-spacing: 2px;
+            font-weight: bold;
+            font-family: "SimSun", "Songti SC", "Times New Roman", serif;
+            text-shadow: 0 1px 1px #000;
+            opacity: 0.8;
+        }
+
+        /* --- 键盘区域 --- */
+        .controls-area {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-top: 5px;
+        }
+
+        button {
+            font-family: 'VT323', monospace;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            background: linear-gradient(to bottom, #f0f0f0 0%, #c0c0c0 100%);
+            box-shadow: 
+                inset 1px 1px 0px rgba(255,255,255,0.9),
+                inset -1px -1px 1px rgba(0,0,0,0.4),
+                0 3px 5px rgba(0,0,0,0.5),
+                0 1px 0 rgba(0,0,0,0.8); 
+            color: #111;
+            border-radius: 5px;
+            transition: transform 0.05s, box-shadow 0.05s, background 0.05s;
+            -webkit-tap-highlight-color: transparent;
+            font-weight: bold;
+        }
+
+        button:active, button.pressed {
+            transform: translateY(2px);
+            background: linear-gradient(to bottom, #d0d0d0 0%, #a0a0a0 100%);
+            box-shadow: 
+                inset 2px 2px 5px rgba(0,0,0,0.4),
+                0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .soft-keys { display: flex; justify-content: space-between; padding: 0 2px; }
+        .soft-btn { width: 55px; height: 30px; font-size: 14px; }
+
+        .nav-cluster {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 25px 25px 25px;
+            gap: 3px;
+            justify-items: center;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .nav-btn { width: 100%; height: 100%; font-size: 12px; border-radius: 4px; }
+        .nav-center { background: linear-gradient(to bottom, #e0e0e0, #b0b0b0); border: 1px solid #999; font-size: 10px; z-index: 2; }
+
+        .keypad { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 0 2px; }
+        .num-btn {
+            height: 34px;
+            border-radius: 6px;
+            font-size: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            line-height: 0.9;
+        }
+        .num-btn span { font-size: 9px; color: #555; margin-top: -2px; }
+
+        .menu-item { padding: 2px 5px; border-bottom: 1px dotted rgba(0,0,0,0.1); }
+        .menu-item.active { background-color: #000; color: #9ea792; }
+        
+        canvas { display: block; margin: 0 auto; border: 1px solid #000; background: rgba(0,0,0,0.05); }
+
+        .call-missed { color: #cc0000; font-weight: bold; }
+        .call-received { color: #006600; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <div class="phone-body">
+        <div class="screen-bezel">
+            <div class="screen">
+                <div class="status-bar">
+                    <span>QIU</span>
+                    <span id="clock">12:00</span>
+                    <span>[|||]</span>
+                </div>
+                <div class="viewport" id="viewport"></div>
+            </div>
+            <div class="brand">YANLANG</div>
+        </div>
+
+        <div class="controls-area">
+            <div class="soft-keys">
+                <button class="soft-btn" onclick="handleInput('SOFT_LEFT')">功能</button>
+                <button class="soft-btn" onclick="handleInput('SOFT_RIGHT')">返回</button>
+            </div>
+            <div class="nav-cluster">
+                <div></div>
+                <button class="nav-btn" onclick="handleInput('UP')">▲</button>
+                <div></div>
+                <button class="nav-btn" onclick="handleInput('LEFT')">◀</button>
+                <button class="nav-btn nav-center" onclick="handleInput('OK')">●</button>
+                <button class="nav-btn" onclick="handleInput('RIGHT')">▶</button>
+                <div></div>
+                <button class="nav-btn" onclick="handleInput('DOWN')">▼</button>
+                <div></div>
+            </div>
+            <div class="keypad">
+                <button class="num-btn" onclick="handleInput('1')">1</button>
+                <button class="num-btn" onclick="handleInput('2')">2<span>abc</span></button>
+                <button class="num-btn" onclick="handleInput('3')">3<span>def</span></button>
+                <button class="num-btn" onclick="handleInput('4')">4<span>ghi</span></button>
+                <button class="num-btn" onclick="handleInput('5')">5<span>jkl</span></button>
+                <button class="num-btn" onclick="handleInput('6')">6<span>mno</span></button>
+                <button class="num-btn" onclick="handleInput('7')">7<span>pqrs</span></button>
+                <button class="num-btn" onclick="handleInput('8')">8<span>tuv</span></button>
+                <button class="num-btn" onclick="handleInput('9')">9<span>wxyz</span></button>
+                <button class="num-btn" onclick="handleInput('*')">*<span>+</span></button>
+                <button class="num-btn" onclick="handleInput('0')">0<span>_</span></button>
+                <button class="num-btn" onclick="handleInput('#')">#</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= 配置区域 ================= */
+        const CONTACT_NAME = "袁朗";
+        
+        let unreadSequence = 1;
+
+        let SMS_DATA = [
+            { text: "明天出门不要迟到。", read: false, unreadId: unreadSequence++ }, 
+            { text: "宿舍楼下的三角梅又开花了。", read: true },
+            { text: "周末有空吗？我休假。带你去吃你说的那个漂亮饭？", read: true },
+            { text: "好好吃饭，别老凑合。", read: true },
+            { text: "天气凉了，多穿一些，预防感冒。", read: true },
+            { text: "今天有掉小珍珠吗", read: true }
+        ];
+
+        let CALL_DATA = [
+            { time: "10:30", type: 0 }, 
+            { time: "昨天", type: 1 },
+            { time: "昨天", type: 0 },
+            { time: "前天", type: 1 },
+            { time: "周一", type: 1 }
+        ];
+
+        const MUSIC_LIST = ["送你一枚小弹壳", "军中绿花", "摇篮曲"];
+
+        /* ================= 系统逻辑 ================= */
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playClickSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.04);
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        function playDialTone(count, onFinish) {
+            if (count <= 0) {
+                if(onFinish) onFinish();
+                return;
+            }
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(425, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.8); 
+            setTimeout(() => { playDialTone(count - 1, onFinish); }, 1500);
+        }
+
+        let currentState = 'HOME';
+        let menuIndex = 0;
+        let subIndex = 0;
+        let musicIndex = 0;
+        let gameInterval = null;
+        let dialBuffer = ""; 
+        let callCount = 0; 
+
+        const MENUS = [
+            { id: 'SMS', label: '短信', icon: '✉' },
+            { id: 'PHONE', label: '通话记录', icon: '☎' },
+            { id: 'MUSIC', label: '音乐播放', icon: '♫' },
+            { id: 'SNAKE', label: '贪吃蛇', icon: '🐍' },
+            { id: 'TETRIS', label: '俄罗斯方块', icon: '🧱' }
+        ];
+
+        const viewport = document.getElementById('viewport');
+
+        function render() {
+            let html = '';
+            
+            if (currentState === 'HOME') {
+                html = `
+                    <div style="text-align:center; margin-top:10px;">
+                        <div style="font-size:32px;">${CONTACT_NAME}</div>
+                        <div style="margin-top:5px; font-size:14px;">中国移动</div>
+                        <div style="margin-top:20px; font-size:14px;">[功能] 菜单</div>
+                    </div>
+                `;
+            } 
+            else if (currentState === 'DIALER') {
+                // 优化：字体缩小，边距缩小
+                html = `
+                    <div style="font-size:22px; padding:5px; word-wrap:break-word; text-align:center;">
+                        ${dialBuffer}<span class="blink">_</span>
+                    </div>
+                    <div style="position:absolute; bottom:5px; width:100%; text-align:center; font-size:14px;">
+                        [功能] 呼叫
+                    </div>
+                `;
+            }
+            else if (currentState === 'EGG_CALLING') {
+                // 优化：顶部边距缩小
+                html = `
+                    <div style="text-align:center; margin-top:10px;">
+                        <div style="font-size:14px;">正在呼叫...</div>
+                        <div style="font-size:22px; margin-top:5px; font-weight:bold;">${dialBuffer}</div>
+                    </div>
+                `;
+            }
+            else if (currentState === 'EGG_CONNECTED') {
+                // 优化：紧凑布局
+                html = `
+                    <div style="text-align:center; margin-top:5px;">
+                        <div style="font-size:14px;">通话中</div>
+                        <div style="font-size:22px; margin:5px 0; font-weight:bold;">${dialBuffer}</div>
+                        <div style="margin-top:5px; padding:5px; border:1px dotted #000; font-size:16px;">
+                            用户无权限<br>拨打该号码
+                        </div>
+                    </div>
+                `;
+            }
+            else if (currentState === 'CALLING_YUANLANG') {
+                // 优化：顶部边距缩小
+                html = `
+                    <div style="text-align:center; margin-top:10px;">
+                        <div style="font-size:14px;">正在呼叫...</div>
+                        <div style="font-size:22px; margin-top:5px; font-weight:bold;">${CONTACT_NAME}</div>
+                    </div>
+                `;
+            }
+            else if (currentState === 'VOICEMAIL') {
+                // 优化：紧凑布局，防止文字溢出
+                html = `
+                    <div style="text-align:center; margin-top:5px;">
+                        <div style="font-size:14px;">通话中 00:01</div>
+                        <div style="font-size:22px; margin:5px 0; font-weight:bold;">${CONTACT_NAME}</div>
+                        <div style="margin-top:5px; padding:2px; font-size:16px; line-height:1.1;">
+                            "你好，我现在不在，有事您可留言。"
+                        </div>
+                    </div>
+                `;
+            }
+            else if (currentState === 'MENU') {
+                html = `<div style="border-bottom:1px solid #000; margin-bottom:2px;">主菜单</div>`;
+                MENUS.forEach((item, index) => {
+                    const active = index === menuIndex ? 'active' : '';
+                    html += `<div class="menu-item ${active}">${item.icon} ${item.label}</div>`;
+                });
+            }
+            else if (currentState === 'SMS_LIST') {
+                html = `<div style="border-bottom:1px solid #000;">收件箱 (${SMS_DATA.length})</div>`;
+                SMS_DATA.forEach((msg, idx) => {
+                    const active = idx === subIndex ? 'active' : '';
+                    let prefix = "";
+                    if (!msg.read) {
+                        prefix = `*(${msg.unreadId}) `;
+                    }
+                    html += `<div class="menu-item ${active}">${prefix}${CONTACT_NAME}</div>`;
+                });
+            }
+            else if (currentState === 'SMS_DETAIL') {
+                const msg = SMS_DATA[subIndex];
+                msg.read = true; 
+                html = `
+                    <div style="border-bottom:1px dashed #000;">${CONTACT_NAME} (${subIndex+1}/${SMS_DATA.length})</div>
+                    <div style="margin-top:5px;">${msg.text}</div>
+                `;
+            }
+            else if (currentState === 'PHONE_LIST') {
+                html = `<div style="border-bottom:1px solid #000;">通话记录</div>`;
+                CALL_DATA.forEach((call, index) => {
+                    const active = index === subIndex ? 'active' : '';
+                    const colorClass = call.type === 0 ? 'call-missed' : 'call-received';
+                    const icon = '↙'; 
+                    html += `<div class="menu-item ${active} ${colorClass}">${icon} ${CONTACT_NAME} <span style="float:right; color:#000; font-weight:normal;">${call.time}</span></div>`;
+                });
+                html += `<div style="margin-top:5px; font-size:12px; text-align:center; color:#555;">按[●]呼叫</div>`;
+            }
+            else if (currentState === 'MUSIC') {
+                // 优化：减少空白，缩小字体，确保不滚动
+                html = `
+                    <div style="text-align:center; margin-top:5px;">
+                        <div style="font-size:14px;">正在播放...</div>
+                        <div style="font-size:16px; margin:5px 0; border:1px dotted #000; padding:2px;">${MUSIC_LIST[musicIndex]}</div>
+                        <div style="font-size:16px;">袁朗</div>
+                        <div style="margin-top:5px;">[ << || >> ]</div>
+                        <div style="font-size:12px; margin-top:2px;">左右键切歌</div>
+                    </div>
+                `;
+            }
+            else if (currentState === 'GAME_SNAKE') {
+                html = `<div style="text-align:center;">贪吃蛇<br><canvas id="gameCanvas" width="140" height="100"></canvas></div>`;
+            }
+            else if (currentState === 'GAME_TETRIS') {
+                html = `<div style="text-align:center;">俄罗斯方块<br><canvas id="gameCanvas" width="80" height="100"></canvas></div>`;
+            }
+
+            viewport.innerHTML = html;
+
+            const activeEl = viewport.querySelector('.active');
+            if (activeEl) {
+                activeEl.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+            }
+
+            if (currentState === 'GAME_SNAKE' && !gameInterval) initSnake();
+            if (currentState === 'GAME_TETRIS' && !gameInterval) initTetris();
+        }
+
+        function handleInput(key) {
+            playClickSound();
+
+            if (key === 'SOFT_RIGHT') {
+                if (currentState === 'DIALER') {
+                    if (dialBuffer.length > 0) dialBuffer = dialBuffer.slice(0, -1);
+                    else currentState = 'HOME';
+                    render();
+                    return;
+                }
+                
+                if (currentState === 'EGG_CONNECTED') {
+                    SMS_DATA.unshift({ text: "乖，别乱打电话。", read: false, unreadId: unreadSequence++ });
+                    alert("收到 1 条新短信！");
+                    currentState = 'HOME';
+                    render();
+                    return;
+                }
+
+                if (currentState === 'VOICEMAIL' || currentState === 'CALLING_YUANLANG') {
+                    const now = new Date();
+                    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                    CALL_DATA.unshift({ time: timeStr, type: 0 });
+                    
+                    callCount++;
+
+                    if (callCount === 3) {
+                        setTimeout(() => {
+                            const m1 = { text: "刚刚在训练，怎么了？", read: false, unreadId: unreadSequence++ };
+                            const m2 = { text: "是想我了吗？乖，我这周末就回去。", read: false, unreadId: unreadSequence++ };
+                            const m3 = { text: "我也想你。", read: false, unreadId: unreadSequence++ };
+                            SMS_DATA.unshift(m3, m2, m1);
+                            alert("收到 3 条新短信！");
+                            if(currentState === 'SMS_LIST') render();
+                        }, 500);
+                    }
+
+                    currentState = 'PHONE_LIST';
+                    subIndex = 0;
+                    render();
+                    return;
+                }
+
+                if (currentState === 'HOME') return;
+                
+                if (currentState.startsWith('GAME')) {
+                    clearInterval(gameInterval);
+                    gameInterval = null;
+                    currentState = 'MENU';
+                }
+                else if (currentState === 'MENU') currentState = 'HOME';
+                else currentState = 'MENU';
+                
+                subIndex = 0;
+                render();
+                return;
+            }
+
+            if (currentState.startsWith('GAME')) {
+                if (currentState === 'GAME_SNAKE') handleSnakeInput(key);
+                if (currentState === 'GAME_TETRIS') handleTetrisInput(key);
+                return;
+            }
+
+            const isNumber = /^[0-9*#]$/.test(key);
+            if (currentState === 'HOME' && isNumber) {
+                currentState = 'DIALER';
+                dialBuffer = key;
+                render();
+                return;
+            }
+            if (currentState === 'DIALER') {
+                if (isNumber) {
+                    dialBuffer += key;
+                    if (key === '#' && dialBuffer === '86749#') {
+                        currentState = 'EGG_CALLING';
+                        render();
+                        playDialTone(3, () => {
+                            currentState = 'EGG_CONNECTED';
+                            render();
+                        });
+                    } else {
+                        render();
+                    }
+                }
+                return;
+            }
+
+            switch (currentState) {
+                case 'HOME':
+                    if (key === 'SOFT_LEFT' || key === 'OK') {
+                        currentState = 'MENU';
+                        menuIndex = 0;
+                    }
+                    break;
+
+                case 'MENU':
+                    if (key === 'UP') menuIndex = (menuIndex - 1 + MENUS.length) % MENUS.length;
+                    if (key === 'DOWN') menuIndex = (menuIndex + 1) % MENUS.length;
+                    if (key === 'OK' || key === 'SOFT_LEFT') {
+                        const selected = MENUS[menuIndex].id;
+                        if (selected === 'SMS') { currentState = 'SMS_LIST'; subIndex = 0; }
+                        else if (selected === 'PHONE') { currentState = 'PHONE_LIST'; subIndex = 0; }
+                        else if (selected === 'MUSIC') currentState = 'MUSIC';
+                        else if (selected === 'SNAKE') currentState = 'GAME_SNAKE';
+                        else if (selected === 'TETRIS') currentState = 'GAME_TETRIS';
+                    }
+                    break;
+
+                case 'SMS_LIST':
+                    if (key === 'UP') subIndex = Math.max(0, subIndex - 1);
+                    if (key === 'DOWN') subIndex = Math.min(SMS_DATA.length - 1, subIndex + 1);
+                    if (key === 'OK' || key === 'SOFT_LEFT') {
+                        currentState = 'SMS_DETAIL';
+                    }
+                    break;
+
+                case 'SMS_DETAIL':
+                    if (key === 'UP') { if (subIndex > 0) subIndex--; render(); }
+                    if (key === 'DOWN') { if (subIndex < SMS_DATA.length - 1) subIndex++; render(); }
+                    break;
+
+                case 'PHONE_LIST':
+                    if (key === 'UP') subIndex = (subIndex - 1 + CALL_DATA.length) % CALL_DATA.length;
+                    if (key === 'DOWN') subIndex = (subIndex + 1) % CALL_DATA.length;
+                    if (key === 'OK' || key === 'SOFT_LEFT') {
+                        currentState = 'CALLING_YUANLANG';
+                        render();
+                        playDialTone(1, () => {
+                            currentState = 'VOICEMAIL';
+                            render();
+                        });
+                    }
+                    break;
+
+                case 'MUSIC':
+                    if (key === 'LEFT') musicIndex = (musicIndex - 1 + MUSIC_LIST.length) % MUSIC_LIST.length;
+                    if (key === 'RIGHT') musicIndex = (musicIndex + 1) % MUSIC_LIST.length;
+                    break;
+            }
+            render();
+        }
+
+        let snake = []; let food = {}; let direction = 'RIGHT'; const gridSize = 10;
+        function initSnake() {
+            const canvas = document.getElementById('gameCanvas'); if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            snake = [{x: 5, y: 5}, {x: 4, y: 5}, {x: 3, y: 5}]; direction = 'RIGHT'; spawnFood();
+            if(gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(() => {
+                const head = { ...snake[0] };
+                if (direction === 'UP') head.y--; if (direction === 'DOWN') head.y++;
+                if (direction === 'LEFT') head.x--; if (direction === 'RIGHT') head.x++;
+                if (head.x < 0 || head.x >= 14 || head.y < 0 || head.y >= 10 || snake.some(s => s.x === head.x && s.y === head.y)) {
+                    clearInterval(gameInterval); gameInterval = null; alert("游戏结束!"); currentState = 'MENU'; render(); return;
+                }
+                snake.unshift(head);
+                if (head.x === food.x && head.y === food.y) spawnFood(); else snake.pop();
+                ctx.fillStyle = '#9ea792'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#000'; snake.forEach(s => ctx.fillRect(s.x * gridSize, s.y * gridSize, gridSize - 1, gridSize - 1));
+                ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1);
+            }, 200);
+        }
+        function spawnFood() { food = { x: Math.floor(Math.random() * 14), y: Math.floor(Math.random() * 10) }; }
+        function handleSnakeInput(key) {
+            if (key === 'UP' && direction !== 'DOWN') direction = 'UP';
+            if (key === 'DOWN' && direction !== 'UP') direction = 'DOWN';
+            if (key === 'LEFT' && direction !== 'RIGHT') direction = 'LEFT';
+            if (key === 'RIGHT' && direction !== 'LEFT') direction = 'RIGHT';
+            if (key === '2') direction = 'UP'; if (key === '8') direction = 'DOWN'; if (key === '4') direction = 'LEFT'; if (key === '6') direction = 'RIGHT';
+        }
+
+        let board = []; let currentPiece = null; const T_COLS = 8; const T_ROWS = 10;
+        const SHAPES = [[[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]], [[1,0],[1,0],[1,1]]];
+        function initTetris() {
+            const canvas = document.getElementById('gameCanvas'); if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            board = Array(T_ROWS).fill().map(() => Array(T_COLS).fill(0)); newPiece();
+            if(gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(() => {
+                if (!movePiece(0, 1)) {
+                    freezePiece(); clearLines(); newPiece();
+                    if (!movePiece(0, 0)) { clearInterval(gameInterval); gameInterval = null; alert("游戏结束!"); currentState = 'MENU'; render(); }
+                }
+                drawTetris(ctx);
+            }, 500);
+        }
+        function newPiece() { currentPiece = { shape: SHAPES[Math.floor(Math.random() * SHAPES.length)], x: Math.floor(T_COLS / 2) - 1, y: 0 }; }
+        function movePiece(dx, dy) {
+            const newX = currentPiece.x + dx; const newY = currentPiece.y + dy;
+            if (isValid(newX, newY, currentPiece.shape)) { currentPiece.x = newX; currentPiece.y = newY; return true; } return false;
+        }
+        function isValid(x, y, shape) {
+            for (let r = 0; r < shape.length; r++) { for (let c = 0; c < shape[r].length; c++) {
+                if (shape[r][c]) { if (x + c < 0 || x + c >= T_COLS || y + r >= T_ROWS || (y + r >= 0 && board[y + r][x + c])) return false; }
+            }} return true;
+        }
+        function freezePiece() {
+            for (let r = 0; r < currentPiece.shape.length; r++) { for (let c = 0; c < currentPiece.shape[r].length; c++) {
+                if (currentPiece.shape[r][c] && currentPiece.y + r >= 0) board[currentPiece.y + r][currentPiece.x + c] = 1;
+            }}
+        }
+        function clearLines() {
+            for (let r = T_ROWS - 1; r >= 0; r--) { if (board[r].every(cell => cell === 1)) { board.splice(r, 1); board.unshift(Array(T_COLS).fill(0)); r++; } }
+        }
+        function drawTetris(ctx) {
+            ctx.fillStyle = '#9ea792'; ctx.fillRect(0, 0, 80, 100); ctx.fillStyle = '#000';
+            for (let r = 0; r < T_ROWS; r++) { for (let c = 0; c < T_COLS; c++) { if (board[r][c]) ctx.fillRect(c * 10, r * 10, 9, 9); } }
+            if (currentPiece) { for (let r = 0; r < currentPiece.shape.length; r++) { for (let c = 0; c < currentPiece.shape[r].length; c++) { if (currentPiece.shape[r][c]) ctx.fillRect((currentPiece.x + c) * 10, (currentPiece.y + r) * 10, 9, 9); } } }
+        }
+        function handleTetrisInput(key) {
+            if (key === 'LEFT' || key === '4') movePiece(-1, 0); if (key === 'RIGHT' || key === '6') movePiece(1, 0);
+            if (key === 'DOWN' || key === '8') movePiece(0, 1);
+            if (key === 'OK' || key === 'UP' || key === '2') {
+                const rotated = currentPiece.shape[0].map((val, index) => currentPiece.shape.map(row => row[index]).reverse());
+                if (isValid(currentPiece.x, currentPiece.y, rotated)) currentPiece.shape = rotated;
+            }
+            const canvas = document.getElementById('gameCanvas'); if(canvas) drawTetris(canvas.getContext('2d'));
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        }, 1000);
+
+        render();
+    </script>
+</body>
+</html>
